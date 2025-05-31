@@ -1,0 +1,14 @@
+# Handwriting Recognition with Hidden Markov Models (HMM)
+
+This project implements a digit recognition system using Hidden Markov Models trained on the MNIST dataset.
+
+## Features
+- Uses HMMs to model handwritten digits (0–9)
+- Feature extraction via vertical slicing
+- Model evaluation with accuracy and confusion matrix
+- Visual display of sample predictions
+
+## Requirements
+Install dependencies with:
+```bash
+pip install -r requirements.txt
