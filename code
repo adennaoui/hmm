@@ -1,0 +1,73 @@
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from hmmlearn import hmm
+from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.model_selection import train_test_split
+from joblib import dump, load
+
+# Step 1: Manually unzipped dataset path
+train_csv = r"C:\Users\aboud\Downloads\mnist_data\mnist_train.csv"
+test_csv = r"C:\Users\aboud\Downloads\mnist_data\mnist_test.csv"
+
+# Load CSVs
+print("Loading MNIST dataset...")
+train_df = pd.read_csv(train_csv)
+test_df = pd.read_csv(test_csv)
+
+# Step 2: Feature extraction function
+def extract_features(image_row, num_slices=14):
+    image = np.array(image_row).reshape(28, 28)
+    slice_width = 28 // num_slices
+    features = []
+    for i in range(num_slices):
+        col_start = i * slice_width
+        col_end = (i + 1) * slice_width
+        slice = image[:, col_start:col_end]
+        features.append([slice.mean(), slice.std()])
+    return np.array(features)
+
+# Step 3: Prepare training data
+models = []
+label_range = range(10)
+
+print("Extracting training features and training HMMs...")
+for digit in label_range:
+    digit_samples = train_df[train_df.iloc[:, 0] == digit].iloc[:, 1:].values
+    all_features = [extract_features(row) for row in digit_samples[:1000]]
+    X = np.vstack(all_features)
+    lengths = [len(seq) for seq in all_features]
+    model = hmm.GaussianHMM(n_components=5, covariance_type='diag', n_iter=100)
+    model.fit(X, lengths)
+    dump(model, f"hmm_digit_{digit}.pkl")
+    models.append(model)
+
+# Step 4: Test recognition
+print("Evaluating models on test set...")
+test_samples = test_df.iloc[:1000, 1:].values
+test_labels = test_df.iloc[:1000, 0].values
+
+predicted_labels = []
+for sample in test_samples:
+    features = extract_features(sample)
+    scores = [model.score(features) for model in models]
+    predicted = np.argmax(scores)
+    predicted_labels.append(predicted)
+
+accuracy = accuracy_score(test_labels, predicted_labels)
+print(f"Accuracy: {accuracy * 100:.2f}%")
+
+# Step 5: Confusion matrix
+cm = confusion_matrix(test_labels, predicted_labels)
+print("Confusion Matrix:\n", cm)
+
+# Step 6: Visualize some results
+for i in range(5):
+    image = test_samples[i].reshape(28, 28)
+    label = test_labels[i]
+    pred = predicted_labels[i]
+    plt.imshow(image, cmap='gray')
+    plt.title(f"True: {label}, Pred: {pred}")
+    plt.axis('off')
+    plt.show()
